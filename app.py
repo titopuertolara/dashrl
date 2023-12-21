@@ -38,23 +38,29 @@ fsc2.set('stop','0')
 fsc3.set('status','idle')
 fsc4.set('plotreward',[])
 fsc5.set('textparams',{'episode':0,'reward':0,'epsilon':0,'steps':0})
+params_style={'display':'inline-block'}
 app.layout = html.Div([
     html.H4('Deep Reinforcement learning simulator'),
+    html.H5('Enviroment'),
     html.Div(dcc.Dropdown(id='models-option',
         options=[
             {'label':'Lunar Lander','value':'LunarLander'},
             {'label':'Cart Pole','value':'CartPole'}],
             value='CartPole'
     )),
+    html.Br(),
     html.Div([
-            html.Div(id='discount-factor-div',children=[html.P('Gamma'),dcc.Input(id='discount_factor_input',type='text')]),
-            html.Div(id='epsilon-factor-div',children=[html.P('Epsilon'),dcc.Input(id='epsilon_input',type='text')]),
-            html.Div(id='epsilon-discount-div',children=[html.P('Decrement'),dcc.Input(id='epsilon_decrement_factor',type='text')]),
-            html.Div(id='learning-rate-div',children=[html.P('Learning rate'),dcc.Input(id='learning_rate',type='text')]),
-            html.Div(id='memory-size-div',children=[html.P('Replay memory size'),dcc.Input(id='memory_size',type='text')]),
-            html.Div(id='episodes-size-div',children=[html.P('Episodes'),dcc.Input(id='episode_size',type='text')]),
-            html.Div(id='batch-size-div',children=[html.P('Batch size'),dcc.Input(id='batch_size',type='text')])
-
+            html.Div([
+                html.Div(id='discount-factor-div',children=[html.P('Gamma'),dcc.Input(id='discount_factor_input',type='text')],style=params_style),
+                html.Div(id='epsilon-factor-div',children=[html.P('Epsilon'),dcc.Input(id='epsilon_input',type='text')],style=params_style),
+                html.Div(id='epsilon-decrement-div',children=[html.P('Decrement'),dcc.Input(id='epsilon_decrement_factor',type='text')],style=params_style),
+                html.Div(id='learning-rate-div',children=[html.P('Learning rate'),dcc.Input(id='learning_rate',type='text')],style=params_style),
+            ],style=params_style),
+            html.Div([
+                html.Div(id='memory-size-div',children=[html.P('Replay memory size'),dcc.Input(id='memory_size',type='text')],style=params_style),
+                html.Div(id='episodes-size-div',children=[html.P('Episodes'),dcc.Input(id='episode_size',type='text')],style=params_style),
+                html.Div(id='batch-size-div',children=[html.P('Batch size'),dcc.Input(id='batch_size',type='text')],style=params_style)
+            ],style=params_style)
 
 
         ]),
@@ -71,50 +77,90 @@ app.layout = html.Div([
                 html.Div(id='steps-div')
 
 
-            ],style={'display':'inline-block','width':'20%'}
+            ],style={'display':'inline-block','width':'20%','margin-top':'1%','position':'absolute'}
         
         )
     ]),
-    html.Div(html.Progress(id='progressbar',value='0',max='100')),
-    html.Div(id='progressbar-msgs'),
-    html.Div(html.Button('Train',id='train-btn',n_clicks=0)),
-    html.Div(html.Button('Stop',id='reset-btn',n_clicks=0)),
-    html.Div(id='status-msg'),
-    html.Div(id='msgs'),
-    html.Div(id='stop-msg'),
+    html.Div([
+        html.Div(id='progressbar-msgs',style=params_style),
+        html.Div(html.Progress(id='progressbar',value='0',max='100'),style=params_style),    
+        html.Div(id='status-msg',style=params_style)
+    ]),
+    html.Div([
+
+        html.Div(html.Button('Train',id='train-btn',n_clicks=0),style=params_style),
+        html.Div(html.Button('Stop',id='reset-btn',n_clicks=0),style=params_style),
+        html.Div(id='msgs',style=params_style),
+        html.Div(id='stop-msg',style=params_style),
+    ]),
+    
     dcc.Interval(id='refresher',interval=100,n_intervals=0),
     dcc.Interval(id='barloader',interval=100,n_intervals=0),
     dcc.Interval(id='statusloader',interval=100,n_intervals=0)
 ])
+# fill parameters
+@callback(Output('discount_factor_input','value'),
+          Output('epsilon_input','value'),
+          Output('epsilon_decrement_factor','value'),
+          Output('learning_rate','value'),
+          Output('memory_size','value'),
+          Output('episode_size','value'),
+          Output('batch_size','value'),
+          [Input('models-option','value')])
+def change_parameters(enviroment):
+    params=suggested_params[enviroment]
+    
+    return params['gamma'],params['epsilon'],params['decrement'],params['lr'],params['memory_size'],params['episodes'],\
+           params['batch_size']
 
 
+#training callback
 @callback(Output('msgs', 'children'),            
                 [Input('train-btn','n_clicks'),
                 Input('reset-btn','n_clicks'),
-                State('models-option','value')])
-def display_value(train_clicks,reset_clicks,model_option):
+                State('models-option','value'),
+                State('discount_factor_input','value'),
+                State('epsilon_input','value'),
+                State('epsilon_decrement_factor','value'),
+                State('learning_rate','value'),
+                State('memory_size','value'),
+                State('episode_size','value'),
+                State('batch_size','value'),])
+def display_value(train_clicks,reset_clicks,model_option,discount_factor,epsilon,decrement,learning_rate,memory_size,episodes,batch_size):
     
     if ctx.triggered_id=='train-btn':
+        try:
+            discount_factor=float(discount_factor)
+            epsilon=float(epsilon)
+            decrement=float(decrement)
+            learning_rate=float(learning_rate)
+            memory_size=int(memory_size)
+            episodes=int(episodes)
+            batch_size=int(batch_size)
+        except:
+            return 'Check parameters'
         fsc2.set('stop','0')
         if model_option=='LunarLander':
-            episodes=2000
-            batch_size=64
-            memory_size=10000
+            #episodes=2000
+            #batch_size=64
+            #memory_size=10000
             env=gym.make('LunarLander-v2',render_mode='rgb_array')
-            agent=DeepQAgent3(env,max_memory_size=memory_size,learning_rate=1e-3,discount_factor=0.999,epsilon_greedy=1)
+            agent=DeepQAgent3(env,max_memory_size=memory_size,learning_rate=learning_rate,discount_factor=discount_factor,epsilon_decrement=decrement,epsilon_greedy=epsilon)
             state=env.reset()[0]
         elif model_option=='CartPole':
-            episodes=200
-            batch_size=32
-            memory_size=100
+            #episodes=200
+            #batch_size=32
+            #memory_size=100
             env=gym.make('CartPole-v1',render_mode='rgb_array')
-            agent=DeepQAgent(env)
+            agent=DeepQAgent(env,discount_factor=discount_factor,epsilon_greedy=epsilon,epsilon_decay=decrement,learning_rate=learning_rate,max_memory_size=memory_size)
             state=env.reset()[0]
        
 
         print("Filling memory")
         fsc3.set('status','Filling replay memory')
         for i in range(memory_size):
+            if fsc2.get('stop')=='1':
+                break
             action=agent.choose_action(state)
             next_state,reward,done,_,_=env.step(action)
             agent.remember((state,action,reward,next_state,done))
@@ -145,6 +191,8 @@ def display_value(train_clicks,reset_clicks,model_option):
             #for s in range(500):
             steps=0
             while not done :
+                if fsc2.get('stop')=='1':
+                    break
                 action=agent.choose_action(state)
                 next_state,reward,done,_,_=env.step(action)
                 agent.remember((state,action,reward,next_state,done))
@@ -174,7 +222,7 @@ def display_value(train_clicks,reset_clicks,model_option):
         return 'Done Training'   
     return ''
 
-# callbackp para imagenes
+# callback ro render gym images
 @callback(Output('env-plot','figure'),
           [Input('refresher','n_intervals')])
 def render(intervals):
@@ -223,6 +271,19 @@ def show_reward(plotintervals):
     fig=go.Figure()
     fig.add_trace(go.Scatter(y=total_rewards,mode='lines+markers',name='Total reward'))
     fig.add_trace(go.Scatter(y=moving_average(total_rewards),name='Mean reward'))
+    fig.update_layout(legend=dict(
+        yanchor='top',
+        y=0.99,
+        xanchor='left',
+        x=0.01
+        ),
+         margin=dict(
+            l=20, 
+            r=20, 
+            t=20, 
+            b=20)
+
+    )
     fig.update_xaxes(title='Episodes')
     fig.update_yaxes(title='Reward')
     return fig
