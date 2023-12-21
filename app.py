@@ -41,7 +41,7 @@ fsc5.set('textparams',{'episode':0,'reward':0,'epsilon':0,'steps':0})
 params_style={'display':'inline-block'}
 app.layout = html.Div([
     html.H4('Deep Reinforcement learning simulator'),
-    html.H5('Enviroment'),
+    html.H5('Environment'),
     html.Div(dcc.Dropdown(id='models-option',
         options=[
             {'label':'Lunar Lander','value':'LunarLander'},
@@ -294,12 +294,15 @@ def show_reward(plotintervals):
           Output('steps-div','children'),
          [Input('statusloader','n_intervals')])
 def show_parameters(parameters_interval):
-    vals=fsc5.get('textparams')
-    episode=vals['episode']
-    rewards=vals['reward']
-    epsilon=vals['epsilon']
-    steps=vals['steps']
-    return f'Episode : {episode}',f'Reward: {rewards}',f'Epsilon: {epsilon}',f'Steps: {steps}'
+    try:
+        vals=fsc5.get('textparams')
+        episode=vals['episode']
+        rewards=vals['reward']
+        epsilon=vals['epsilon']
+        steps=vals['steps']
+        return f'Episode : {episode}',f'Reward: {rewards}',f'Epsilon: {epsilon}',f'Steps: {steps}'
+    except:
+        return ''
 
 
 
