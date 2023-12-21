@@ -8,6 +8,12 @@ from collections import deque
 from dash_extensions.enrich import Trigger, FileSystemCache
 from tqdm import tqdm
 import time
+
+
+def moving_average(x, span=100):
+    return pd.DataFrame({'x': np.asarray(x)}).x.ewm(span=span).mean().values
+
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
@@ -17,6 +23,8 @@ fsc = FileSystemCache("cache_dir")
 fsc1 = FileSystemCache("cache_dir")
 fsc2 = FileSystemCache("cache_dir")
 fsc3 = FileSystemCache("cache_dir")
+fsc4 = FileSystemCache("cache_dir")
+fsc5 = FileSystemCache("cache_dir")
 
 
 fsc1.set('progressbar','0')
@@ -24,7 +32,7 @@ zeros_img=np.full((400,600,3),255,dtype=np.uint8)
 fsc.set('images',zeros_img)
 fsc2.set('stop','0')
 fsc3.set('status','idle')
-
+fsc4.set('plotreward',[])
 app.layout = html.Div([
     html.Div(dcc.Dropdown(id='models-option',
         options=[
@@ -33,6 +41,7 @@ app.layout = html.Div([
             value='LunarLander'
     )),
     html.Div(id='env-div',children=[dcc.Graph(id='env-plot')]),
+    html.Div(id='reward-div',children=[dcc.Graph(id='reward-plot')]),
     html.Div(html.Progress(id='progressbar',value='0',max='100')),
     html.Div(id='progressbar-msgs'),
     html.Div(html.Button('Train',id='train-btn',n_clicks=0)),
@@ -171,6 +180,9 @@ def stop_job(nclicksreset,nclickscontinue):
 def show_status(status):
     value=fsc3.get('status')
     return value
+#callback to plot reward
+
+
 
     
 
